@@ -40,7 +40,7 @@ async fn handle_conn(stream: TcpStream) {
             let (command, args) = extract_command(v).unwrap();
             match command.as_str() {
                 "ping" => Value::SimpleString("PONG".to_string()),
-                "echo" => args.first().unwrap().clone(),
+                "ECHO" => args.first().unwrap().clone(),
                 _ => panic!("Cannot handle command {}", command),
             }
         } else {
