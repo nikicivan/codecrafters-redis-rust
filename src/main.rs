@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use resp::{RespHandler, Value};
 use tokio::net::{TcpListener, TcpStream};
@@ -28,6 +30,7 @@ async fn main() {
 
 async fn handle_conn(stream: TcpStream) {
     let mut handler = RespHandler::new(stream);
+    let mut storage: HashMap<String, String> = HashMap::new();
 
     println!("Starting read loop");
 
@@ -41,6 +44,12 @@ async fn handle_conn(stream: TcpStream) {
             match command.as_str() {
                 "PING" => Value::SimpleString("PONG".to_string()),
                 "ECHO" => args.first().unwrap().clone(),
+                "set" => set(
+                    &mut storage,
+                    unpack_bulk_str(args[0].clone()).unwrap(),
+                    unpack_bulk_str(args[1].clone()).unwrap(),
+                ),
+                "get" => get(&storage, unpack_bulk_str(args[0].clone()).unwrap()),
                 _ => panic!("Cannot handle command {}", command),
             }
         } else {
@@ -67,5 +76,17 @@ fn unpack_bulk_str(value: Value) -> Result<String> {
     match value {
         Value::BulkString(s) => Ok(s),
         _ => Err(anyhow::anyhow!("Expected command to be a bulk string")),
+    }
+}
+
+fn set(storage: &mut HashMap<String, String>, key: String, value: String) -> Value {
+    storage.insert(key, value);
+    Value::SimpleString("OK".to_string())
+}
+
+fn get(storage: &HashMap<String, String>, key: String) -> Value {
+    match storage.get(&key) {
+        Some(v) => Value::BulkString(v.to_string()),
+        None => Value::Null,
     }
 }
