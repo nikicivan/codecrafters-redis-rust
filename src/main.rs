@@ -44,12 +44,12 @@ async fn handle_conn(stream: TcpStream) {
             match command.as_str() {
                 "PING" => Value::SimpleString("PONG".to_string()),
                 "ECHO" => args.first().unwrap().clone(),
-                "set" => set(
+                "SET" => set(
                     &mut storage,
                     unpack_bulk_str(args[0].clone()).unwrap(),
                     unpack_bulk_str(args[1].clone()).unwrap(),
                 ),
-                "get" => get(&storage, unpack_bulk_str(args[0].clone()).unwrap()),
+                "GET" => get(&storage, unpack_bulk_str(args[0].clone()).unwrap()),
                 _ => panic!("Cannot handle command {}", command),
             }
         } else {
