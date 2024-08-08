@@ -50,7 +50,7 @@ async fn handle_conn(stream: TcpStream) {
                     if args.len() > 3 {
                         let subcommand = unpack_bulk_str(args[2].clone()).unwrap();
                         match subcommand.as_str() {
-                            "PX" => {
+                            "px" => {
                                 let expires =
                                     unpack_bulk_str(args[3].clone()).unwrap().parse().unwrap();
                                 storage.set(&key, &value, expires);

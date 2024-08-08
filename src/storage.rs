@@ -1,7 +1,5 @@
 use std::{collections::HashMap, time::Instant};
 
-use anyhow::{Ok, Result};
-
 use crate::resp::Value;
 
 #[derive(Debug)]
