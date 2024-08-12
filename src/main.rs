@@ -12,7 +12,10 @@ struct ServerSettings {
     pub role: Role,
     pub replica_of_host: Option<String>,
     pub replica_of_port: Option<String>,
+    pub master_replid: String,
+    pub master_repl_offset: u32,
 }
+
 impl ServerSettings {
     fn new() -> ServerSettings {
         ServerSettings {
@@ -20,6 +23,8 @@ impl ServerSettings {
             port: String::from("6379"),
             replica_of_host: None,
             replica_of_port: None,
+            master_replid: String::from("8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"),
+            master_repl_offset: 0,
         }
     }
 }
@@ -241,7 +246,7 @@ fn parse_command<'a>(value: &'a Value) -> anyhow::Result<Command> {
                         set_command.ttl = Some(
                             argument_value
                                 .parse::<u64>()
-                                .expect("Expected interger value after PX argument"),
+                                .expect("Expected integer value after PX argument"),
                         );
                     }
                     _ => unimplemented!(),
@@ -316,16 +321,33 @@ fn execute_command(server: &Server, command: &Command) -> anyhow::Result<Value> 
             let info = match info_section {
                 InfoSection::ALL | InfoSection::REPLICATION => {
                     let mut_state = server.lock().unwrap();
-                    match mut_state.settings.role {
+                    let mut info_dump = String::new();
+                    info_dump.push_str(match mut_state.settings.role {
                         Role::Master => "role:master",
                         Role::Slave => "role:slave",
-                    }
+                    });
+                    info_dump.push_str(
+                        format!("\nmaster_replid:{}", mut_state.settings.master_replid).as_str(),
+                    );
+                    info_dump.push_str(
+                        format!(
+                            "\nmaster_repl_offset:{}",
+                            mut_state.settings.master_repl_offset
+                        )
+                        .as_str(),
+                    );
+                    info_dump
+                    // match mut_state.settings.role {
+                    //     Role::Master => "role:master",
+                    //     Role::Slave => "role:slave",
+                    // }
                 }
             };
+            let info_len = info.len() as i64;
 
             Ok(Value::from(BulkStringValue {
-                data: info.to_string(),
-                length: info.len() as i64,
+                data: info,
+                length: info_len,
             }))
         }
     }
