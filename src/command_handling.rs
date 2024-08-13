@@ -65,11 +65,13 @@ async fn get_command(session: &mut Session, cmd: GetCommand) {
     let cv = session.storage.get(&cmd.key);
 
     if cv.is_some_and(|x| !x.is_expired()) {
-        let cvu = cv.unwrap();
+        let cv = cv.unwrap();
         write_response(
             &mut session.stream,
-            format!("${}\r\n{}\r\n", cvu.value.len(), cvu.value).as_str(),
+            format!("${}\r\n{}\r\n", cv.value.len(), cv.value).as_str(),
         )
         .await;
+    } else {
+        write_response(&mut session.stream, "$-1\r\n").await;
     }
 }

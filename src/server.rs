@@ -76,7 +76,7 @@ impl ServerInfo {
         if self.master_info.is_some() {
             let master_info = self.master_info.as_ref().unwrap();
             values.push(format!("master_replid:{}", master_info.replid));
-            values.push(format!("master_repl_offset: {}", master_info.repl_offset));
+            values.push(format!("master_repl_offset:{}", master_info.repl_offset));
         }
 
         values
