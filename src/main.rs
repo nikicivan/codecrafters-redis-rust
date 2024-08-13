@@ -9,6 +9,7 @@ use tokio::{
 
 mod command_handling;
 mod commands;
+mod helpers;
 mod protocol_parser;
 mod server;
 
@@ -31,13 +32,12 @@ async fn main() -> Result<()> {
     let addr = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(&addr).await?;
 
-    let server_info = match cli.replicaof {
-        Some(master_addr) => {
-            let master_addr = master_addr.replace(' ', ":");
-            master_handshake(&master_addr).await;
-            ServerInfo::new_slave(&addr, &master_addr)
-        }
-        None => ServerInfo::new_master(&addr),
+    let server_info = if let Some(master_addr) = cli.replicaof {
+        let master_addr = master_addr.replace(' ', ":");
+        master_handshake(&master_addr, port).await;
+        ServerInfo::new_slave(&addr, &master_addr)
+    } else {
+        ServerInfo::new_master(&addr)
     };
 
     loop {
@@ -51,12 +51,22 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn master_handshake(master_addr: &str) {
-    let mut conn = TcpStream::connect(master_addr)
+async fn master_handshake(master_addr: &str, slave_port: i16) {
+    let mut stream = TcpStream::connect(master_addr)
         .await
         .expect("Can not connect to master server");
 
-    conn.write_all("*1\r\n$4\r\nping\r\n".as_bytes())
+    // SEND the PING command to master
+    send_ping_command(&mut stream).await;
+
+    // Send the first REPLCONF command to master
+    send_replconf_command(vec!["listening-port", &slave_port.to_string()], &mut stream).await;
+
+    // Send the second REPLCONF command to master.
+    send_replconf_command(vec!["capa", "psync2"], &mut stream).await;
+
+    stream
+        .write_all("*1\r\n$4\r\nping\r\n".as_bytes())
         .await
         .expect("Can not return response from master server");
 }
@@ -95,4 +105,62 @@ async fn handle_request(session: &mut Session) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+async fn send_ping_command(stream: &mut TcpStream) {
+    let ping = helpers::RespHandler::to_resp_array(vec!["PING"]);
+    stream
+        .write_all(ping.as_bytes())
+        .await
+        .expect("Couldn't send ping");
+
+    stream.flush().await.expect("Couldn't flush response");
+
+    let read_buff = &mut [0; 128];
+    let bytes_read = stream
+        .read(read_buff)
+        .await
+        .expect("couldn't read response");
+
+    if bytes_read == 0 {
+        panic!("Received non-UTF8 data.")
+    }
+
+    match String::from_utf8(read_buff[..bytes_read].to_vec()) {
+        Ok(r) => {
+            if r != "+PONG\r\n" {
+                panic!("Unexpected PING response from master: {}", r);
+            }
+        }
+        Err(_) => panic!("Received non-UTF8 data."),
+    }
+}
+
+async fn send_replconf_command(mut values: Vec<&str>, stream: &mut TcpStream) {
+    values.insert(0, "REPLCONF");
+    let replconf = helpers::RespHandler::to_resp_array(values);
+    stream
+        .write_all(replconf.as_bytes())
+        .await
+        .expect("Failed to send replconf response");
+    stream.flush().await.expect("Couldn't flush response");
+
+    let read_buff = &mut [0; 128];
+    let bytes_read = stream
+        .read(read_buff)
+        .await
+        .expect("couldn't read response");
+
+    if bytes_read == 0 {
+        panic!("Received non-UTF8 data.")
+    }
+
+    match String::from_utf8(read_buff[..bytes_read].to_vec()) {
+        Ok(r) => {
+            if r != "+OK\r\n" {
+                panic!("Unexpected REPLCONF response from master: {}", r);
+            }
+        }
+        Err(_) => panic!("Received non-UTF8 data."),
+    }
 }
