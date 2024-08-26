@@ -65,10 +65,12 @@ async fn master_handshake(master_addr: &str, slave_port: i16) {
     // Send the second REPLCONF command to master.
     send_replconf_command(vec!["capa", "psync2"], &mut stream).await;
 
-    stream
-        .write_all("*1\r\n$4\r\nping\r\n".as_bytes())
-        .await
-        .expect("Can not return response from master server");
+    // stream
+    //     .write_all("*1\r\n$4\r\nping\r\n".as_bytes())
+    //     .await
+    //     .expect("Can not return response from master server");
+
+    send_psync_command(vec!["PSYNC", "?", "-1"], &mut stream).await;
 }
 
 async fn handle_connect(session: &mut Session) {
@@ -163,4 +165,33 @@ async fn send_replconf_command(mut values: Vec<&str>, stream: &mut TcpStream) {
         }
         Err(_) => panic!("Received non-UTF8 data."),
     }
+}
+
+async fn send_psync_command(values: Vec<&str>, stream: &mut TcpStream) {
+    let replconf = helpers::RespHandler::to_resp_array(values);
+    println!("{:?}", replconf);
+    stream
+        .write_all(replconf.as_bytes())
+        .await
+        .expect("Failed to send replconf response");
+    stream.flush().await.expect("Couldn't flush response");
+
+    // let read_buff = &mut [0; 128];
+    // let bytes_read = stream
+    //     .read(read_buff)
+    //     .await
+    //     .expect("couldn't read response");
+
+    // if bytes_read == 0 {
+    //     panic!("Received non-UTF8 data.")
+    // }
+
+    // match String::from_utf8(read_buff[..bytes_read].to_vec()) {
+    //     Ok(r) => {
+    //         if r != "+OK\r\n" {
+    //             panic!("Unexpected REPLCONF response from master: {}", r);
+    //         }
+    //     }
+    //     Err(_) => panic!("Received non-UTF8 data."),
+    // }
 }

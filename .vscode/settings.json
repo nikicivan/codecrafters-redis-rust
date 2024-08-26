@@ -1,7 +1,9 @@
 {
   "cSpell.words": [
+    "capa",
     "chrono",
     "proto",
+    "psync",
     "replconf",
     "replicaof",
     "replid"
