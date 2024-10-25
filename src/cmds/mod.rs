@@ -1,4 +1,7 @@
-pub use command::{Echo, Get, Keys, Ping, Psync, Replconf, Save, Set};
+pub use command::{
+    Discard, Echo, Exec, Get, Incr, Keys, Multi, Ping, Psync, Replconf, Save, Set, Type, Wait,
+    Xadd, Xrange, Xread,
+};
 pub use config::{Config, SubCommand};
 pub use info::{Info, InfoSubCommand};
 
@@ -8,16 +11,25 @@ mod info;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
+    Discard(Discard),
     Get(Get),
     Set(Set),
+    Incr(Incr),
     Ping(Ping),
     Echo(Echo),
+    Multi(Multi),
     Config(Config),
+    Exec(Exec),
     Save(Save),
     Keys(Keys),
     Info(Info),
     Replconf(Replconf),
     Psync(Psync),
+    Type(Type),
+    Wait(Wait),
+    Xadd(Xadd),
+    Xrange(Xrange),
+    Xread(Xread),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,5 +1,5 @@
-use super::ExpiringHashMap;
-use crate::global::CONFIG_LIST;
+use super::KeyValueStore;
+use crate::global::STATE;
 use anyhow::Error;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use std::any::Any;
@@ -16,11 +16,11 @@ use std::{
 const MAGIC_STRING: [u8; 9] = *b"REDIS0011";
 
 async fn init_db(file_mode: String) -> anyhow::Result<File, Error> {
-    let rdb_dir = CONFIG_LIST
+    let rdb_dir = STATE
         .get_val(&"dir".into())
         .expect("directory name is empty");
 
-    let rdb_file = CONFIG_LIST
+    let rdb_file = STATE
         .get_val(&"dbfilename".into())
         .expect("filename is empty");
 
@@ -56,7 +56,6 @@ async fn init_db(file_mode: String) -> anyhow::Result<File, Error> {
 
     rdb_file.write_all(&metadata)?;
     if file_mode == "read".to_owned() {
-        println!("READDDD");
         drop(rdb_file);
         return Ok(OpenOptions::new().read(true).open(&rdb_file_p)?);
     } else {
@@ -64,7 +63,7 @@ async fn init_db(file_mode: String) -> anyhow::Result<File, Error> {
     }
 }
 
-pub async fn write_to_disk(mut db: ExpiringHashMap<String, String>) -> anyhow::Result<()> {
+pub async fn write_to_disk(mut db: KeyValueStore<String, String>) -> anyhow::Result<()> {
     let mut rdb_file = init_db("write".to_string()).await?;
 
     // Database Subsection
@@ -79,9 +78,7 @@ pub async fn write_to_disk(mut db: ExpiringHashMap<String, String>) -> anyhow::R
 
     let op_code: u8 = 0xFB;
     let ht_size = db.get_ht_size().await;
-    dbg!(&ht_size);
     let ht_expire_size = db.get_ht_expire_size().await;
-    dbg!(&ht_expire_size);
     rdb_file
         .write_all(&[op_code])
         .expect("Writing db subsection failed - ht_size - op_code");
@@ -118,7 +115,7 @@ fn length_encoded_int(n: usize) -> Vec<u8> {
     encoded_int
 }
 
-pub async fn load_from_rdb(mut db: ExpiringHashMap<String, String>) -> anyhow::Result<(), Error> {
+pub async fn load_from_rdb(mut db: KeyValueStore<String, String>) -> anyhow::Result<(), Error> {
     let file = init_db("read".to_string()).await.expect("File init failed");
     let mut reader = BufReader::new(file);
 
@@ -289,11 +286,9 @@ pub async fn load_from_rdb(mut db: ExpiringHashMap<String, String>) -> anyhow::R
             }
             "fc" | "fd" => {
                 // let mut buffer: Vec<u8> = vec![0; 8]; // Vec::with_capacity(key_len);
-                dbg!(&byte_hex);
                 let now = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .expect("Time went backwards");
-                dbg!(&byte_hex);
                 let duration = if &byte_hex == "fc" {
                     let expiry_unixtime = reader.read_u64::<LittleEndian>().unwrap();
                     let now = now.as_millis() as u64;

@@ -13,6 +13,11 @@ pub struct Set {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Incr {
+    pub key: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ping {
     pub value: Option<String>,
 }
@@ -39,3 +44,43 @@ pub struct Replconf {
 pub struct Psync {
     pub args: Vec<String>,
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Wait {
+    pub args: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Type {
+    pub key: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Xadd {
+    pub key: String,
+    pub entry_id: String,
+    pub args: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Xrange {
+    pub key: String,
+    pub start: String,
+    pub end: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Xread {
+    pub block: Option<u64>,
+    pub keys: Vec<String>,
+    pub entry_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Multi;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Exec;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Discard;
