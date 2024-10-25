@@ -122,7 +122,7 @@ async fn handle_follower() {
         let mut stream = tokio::net::TcpStream::connect(leader_addr).await.unwrap();
         // Hashshake
         let message = b"*1\r\n$4\r\nPING\r\n";
-        stream.write_all(message).await;
+        let _ = stream.write_all(message).await;
 
         let mut buffer = [0; 512];
         let n = stream.read(&mut buffer).await.unwrap();

@@ -97,6 +97,7 @@ impl<'b> TryFrom<Tokenizer<'b>> for RespData {
                                             Token::Num(n) => n.to_string(),
                                             Token::Asterisk => "*".to_string(),
                                             Token::Minus => "-".to_string(),
+                                            Token::Question => "?".to_string(),
                                             _ => return Err(RespError::Invalid),
                                         };
 
@@ -105,7 +106,9 @@ impl<'b> TryFrom<Tokenizer<'b>> for RespData {
                                                 if kw.as_str() == "REPLCONF" {
                                                     let (token1, token2) =
                                                         (tokens.next(), tokens.next());
+
                                                     if let Some(Ok(Token::Minus)) = token1 {
+                                                        dbg!(Token::Minus);
                                                         if let Some(Ok(Token::Word(t))) = token2 {
                                                             if t.as_str() == "port" {
                                                                 word = "listening-port".to_string();
